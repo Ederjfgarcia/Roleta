@@ -6,36 +6,129 @@
 <title>Roleta da Sorte — Atualizado</title>
 <style>
   html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;background:radial-gradient(circle at center,#fefefe 0%,#ddd 100%);overflow:hidden}
-  #result{position:absolute;top:18px;width:100%;text-align:center;font-size:1.6rem;font-weight:700;color:#222;text-shadow:0 2px 4px rgba(0,0,0,.15);z-index:12}
-  #wheelCanvas{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(0deg);border-radius:50%;transition:transform 5s cubic-bezier(.14,.84,.34,1);cursor:pointer;z-index:8}
-  .arrow{position:absolute;bottom:8px;left:50%;transform:translateX(-50%) rotate(180deg);width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;border-top:36px solid #d33;z-index:11;filter:drop-shadow(0 2px 4px rgba(0,0,0,.25))}
+  
+  /* Container do Cabeçalho */
+  #headerContainer{position:absolute;top:10px;left:50%;transform:translateX(-50%);max-height:80px;display:flex;justify-content:center;align-items:center;z-index:13;width:80%;pointer-events:none}
+  #headerImage{max-height:80px;max-width:100%;object-fit:contain;display:none;pointer-events:auto}
+
+  /* Barras Verticais Laterais com Largura Configurável */
+  .side-bar{position:absolute;top:0;bottom:0;width:80px;z-index:9;display:none;justify-content:center;align-items:center;overflow:hidden;pointer-events:none}
+  #leftBar{left:0;}
+  #rightBar{right:0;}
+  .side-bar img{width:100%;height:100%;object-fit:cover}
+
+  /* Rodapé Configurável */
+  #footerContainer{position:absolute;bottom:0;left:0;width:100%;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;background:rgba(255,255,255,0.4);padding:4px 0}
+  #footerImage{max-height:45px;max-width:80%;object-fit:contain;display:none;margin-bottom:2px}
+  #footerText{font-size:0.85rem;color:#444;font-weight:600;display:none;text-align:center;padding:0 10px}
+
+  #result{position:absolute;top:95px;width:100%;text-align:center;font-size:1.6rem;font-weight:700;color:#222;text-shadow:0 2px 4px rgba(0,0,0,.15);z-index:12}
+  #wheelCanvas{position:absolute;top:52%;left:50%;transform:translate(-50%,-50%) rotate(0deg);border-radius:50%;transition:transform 5s cubic-bezier(.14,.84,.34,1);cursor:pointer;z-index:8}
+  .arrow{position:absolute;bottom:90px;left:50%;transform:translateX(-50%) rotate(180deg);width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;border-top:36px solid #d33;z-index:11;filter:drop-shadow(0 2px 4px rgba(0,0,0,.25))}
+  
   #configBtn{position:absolute;bottom:20px;right:20px;background:rgba(0,0,0,.28);color:#fff;border:none;border-radius:50%;width:50px;height:50px;font-size:22px;cursor:pointer;z-index:20}
-  #configPanel{position:absolute;bottom:80px;right:20px;background:#fff;border-radius:12px;padding:12px;box-shadow:0 8px 20px rgba(0,0,0,.18);display:none;width:260px;z-index:21}
-  #configPanel h3{margin:0 0 8px 0;font-size:16px}
-  #configPanel input[type=text]{width:100%;padding:6px;border:1px solid #ccc;border-radius:6px;margin-bottom:6px;box-sizing:border-box}
+  #configPanel{position:absolute;bottom:80px;right:20px;background:#fff;border-radius:12px;padding:14px;box-shadow:0 8px 20px rgba(0,0,0,.18);display:none;width:320px;max-height:80vh;overflow-y:auto;z-index:21}
+  #configPanel h3{margin:0 0 8px 0;font-size:15px;border-bottom:1px solid #eee;padding-bottom:4px}
+  #configPanel h4{margin:10px 0 6px 0;font-size:13px;color:#555}
+  #configPanel input[type=text], #configPanel input[type=number], #configPanel select{width:100%;padding:6px;border:1px solid #ccc;border-radius:6px;margin-bottom:6px;box-sizing:border-box}
   #configPanel button{padding:6px 8px;border-radius:6px;border:none;background:#2196f3;color:white;cursor:pointer;margin-right:6px}
-  #spinVisible{position:absolute;right:50%;transform:translateX(50%);bottom:20px;padding:12px 18px;background:#28a745;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer;z-index:19;box-shadow:0 6px 18px rgba(40,167,69,.25)}
+  
+  .item-row{display:flex;flex-direction:column;gap:4px;padding:6px;background:#f8f9fa;border:1px solid #e9ecef;border-radius:6px;margin-bottom:6px}
+  .item-row-top{display:flex;gap:6px}
+
+  #spinVisible{position:absolute;right:50%;transform:translateX(50%);bottom:35px;padding:12px 24px;background:#28a745;color:#fff;border:none;border-radius:8px;font-size:18px;font-weight:bold;cursor:pointer;z-index:19;box-shadow:0 6px 18px rgba(40,167,69,.25)}
   #spinVisible:disabled{opacity:.55;cursor:default}
-  canvas#confettiCanvas, canvas#fireworksCanvas{position:fixed;left:0;top:0;pointer-events:none;width:100%;height:100%;z-index:15}
-  /* small responsive */
-  @media (max-width:480px){ #result{font-size:1.1rem} #configPanel{width:200px} }
+  
+  canvas#confettiCanvas, canvas#fireworksCanvas, canvas#effectsCanvas{position:fixed;left:0;top:0;pointer-events:none;width:100%;height:100%;z-index:15}
+  
+  .shake-effect { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+  @keyframes shake {
+    10%, 90% { transform: translate3d(-2px, 0, 0); }
+    20%, 80% { transform: translate3d(4px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-8px, 0, 0); }
+    40%, 60% { transform: translate3d(8px, 0, 0); }
+  }
+
+  @media (max-height: 650px) {
+    #headerContainer { max-height: 50px; }
+    #headerImage { max-height: 50px; }
+    #result { top: 60px; font-size: 1.2rem; }
+    #wheelCanvas { top: 50%; }
+  }
+  @media (max-width:480px){ #result{font-size:1.1rem} #configPanel{width:260px} .side-bar{display:none !important} }
 </style>
 </head>
 <body>
+
+  <!-- Barras Verticais Laterais -->
+  <div id="leftBar" class="side-bar"><img id="leftBarImg" alt="Barra Esquerda" /></div>
+  <div id="rightBar" class="side-bar"><img id="rightBarImg" alt="Barra Direita" /></div>
+
+  <!-- Cabeçalho -->
+  <div id="headerContainer">
+    <img id="headerImage" alt="Cabeçalho" />
+  </div>
+
   <div id="result">— Aguardando sorteio —</div>
 
   <canvas id="wheelCanvas" width="600" height="600" aria-label="Roleta"></canvas>
   <div class="arrow" aria-hidden="true"></div>
 
+  <!-- Rodapé -->
+  <div id="footerContainer">
+    <img id="footerImage" alt="Rodapé" />
+    <div id="footerText"></div>
+  </div>
+
   <canvas id="confettiCanvas"></canvas>
   <canvas id="fireworksCanvas"></canvas>
+  <canvas id="effectsCanvas"></canvas>
 
   <button id="configBtn" title="Configurações">⚙️</button>
 
   <div id="configPanel" aria-hidden="true">
-    <h3>Itens da Roleta</h3>
-    <div id="itemsList" style="max-height:200px;overflow:auto;margin-bottom:6px"></div>
+    <h3>Imagem de Cabeçalho</h3>
+    <input type="file" accept="image/*" style="margin-bottom:6px;width:100%" onchange="uploadImage(event, 'headerImage')" />
+    <input type="text" placeholder="URL do cabeçalho..." onchange="setImageUrl('headerImage', this.value)" />
+    <button style="background:#ff6b6b;margin-bottom:12px" onclick="removeImage('headerImage')">Remover Cabeçalho</button>
+
+    <h3>Barras Laterais Verticais</h3>
+    <h4>Barra Esquerda</h4>
+    <input type="file" accept="image/*" style="margin-bottom:6px;width:100%" onchange="uploadSideBar(event, 'leftBar', 'leftBarImg')" />
+    <input type="text" placeholder="URL barra esquerda..." onchange="setSideBarUrl('leftBar', 'leftBarImg', this.value)" />
+    <input type="number" placeholder="Largura em px (ex: 120)" oninput="setSideBarWidth('leftBar', this.value)" />
+    <button style="background:#ff6b6b;margin-bottom:8px" onclick="removeSideBar('leftBar', 'leftBarImg')">Remover Esquerda</button>
+
+    <h4>Barra Direita</h4>
+    <input type="file" accept="image/*" style="margin-bottom:6px;width:100%" onchange="uploadSideBar(event, 'rightBar', 'rightBarImg')" />
+    <input type="text" placeholder="URL barra direita..." onchange="setSideBarUrl('rightBar', 'rightBarImg', this.value)" />
+    <input type="number" placeholder="Largura em px (ex: 120)" oninput="setSideBarWidth('rightBar', this.value)" />
+    <button style="background:#ff6b6b;margin-bottom:12px" onclick="removeSideBar('rightBar', 'rightBarImg')">Remover Direita</button>
+
+    <h3>Rodapé</h3>
+    <input type="file" accept="image/*" style="margin-bottom:6px;width:100%" onchange="uploadImage(event, 'footerImage')" />
+    <input type="text" placeholder="URL imagem rodapé..." onchange="setImageUrl('footerImage', this.value)" />
+    <button style="background:#ff6b6b;margin-bottom:8px" onclick="removeImage('footerImage')">Remover Imagem Rodapé</button>
+    <input type="text" id="footerTextInput" placeholder="Texto do rodapé..." oninput="setFooterText(this.value)" />
+
+    <h3>Itens e Animações</h3>
+    <div id="itemsList" style="max-height:180px;overflow:auto;margin-bottom:6px"></div>
+    
+    <h4>Novo Item</h4>
     <input id="newItem" type="text" placeholder="Novo item..." />
+    <select id="newAnim" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:6px;margin-bottom:6px">
+      <optgroup label="Festivas 🎉">
+        <option value="confetti_fireworks">Confetes & Fogos</option>
+        <option value="gold_stars">Chuva de Estrelas & Ouro</option>
+        <option value="balloons">Balões Subindo</option>
+      </optgroup>
+      <optgroup label="Tristes / Decepcionantes 🌧️">
+        <option value="rain_thunder">Chuva & Raios</option>
+        <option value="smoke_cloud">Nuvem Escura / Fumaça</option>
+        <option value="screen_shake">Tremor & Decepção</option>
+      </optgroup>
+      <option value="none">Nenhuma Animação</option>
+    </select>
     <div style="margin-top:8px;">
       <button onclick="addItem()">Adicionar</button>
       <button id="resetBtn" style="background:#ff6b6b" onclick="resetDefaults()">Reset</button>
@@ -44,18 +137,19 @@
 
   <button id="spinVisible" title="Girar roleta">Girar</button>
 
-  <!-- som de giro (CDN pública). Se quiser, posso trocar para outro arquivo. -->
   <audio id="spinSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_f0e1a6b0c9.mp3?filename=steel-drums-10829.mp3" preload="auto"></audio>
   <audio id="winSound" src="https://cdn.pixabay.com/download/audio/2021/12/15/audio_0c3a4d4b86.mp3?filename=applause-8-6413.mp3" preload="auto"></audio>
 
 <script>
-/* ---------- Variáveis e canvas ---------- */
+/* ---------- Variáveis e Canvas ---------- */
 const wheelCanvas = document.getElementById('wheelCanvas');
 const ctx = wheelCanvas.getContext('2d');
 const confettiCanvas = document.getElementById('confettiCanvas');
 const cctx = confettiCanvas.getContext('2d');
 const fireworksCanvas = document.getElementById('fireworksCanvas');
 const fctx = fireworksCanvas.getContext('2d');
+const effectsCanvas = document.getElementById('effectsCanvas');
+const ectx = effectsCanvas.getContext('2d');
 
 const spinSound = document.getElementById('spinSound');
 const winSound = document.getElementById('winSound');
@@ -65,99 +159,199 @@ const configPanel = document.getElementById('configPanel');
 const itemsListDiv = document.getElementById('itemsList');
 const spinVisibleBtn = document.getElementById('spinVisible');
 
-let items = ["Prêmio 1","Prêmio 2","Prêmio 3","Prêmio 4","Prêmio 5"];
-let cumulativeRotation = 0; // em graus, preserva rotação total entre giros
-let spinning = false;
-let spinDuration = 5000; // ms - deve combinar com CSS transition
+let items = [
+  { text: "Prêmio 1", anim: "confetti_fireworks" },
+  { text: "Prêmio 2", anim: "rain_thunder" },
+  { text: "Prêmio 3", anim: "gold_stars" },
+  { text: "Prêmio 4", anim: "smoke_cloud" },
+  { text: "Prêmio 5", anim: "balloons" }
+];
 
-/* ---------- redimensionamento e desenho ---------- */
+let cumulativeRotation = 0;
+let spinning = false;
+let spinDuration = 5000;
+let activeAnimationId = null;
+
+/* ---------- Gestão de Imagens Cabeçalho & Rodapé ---------- */
+function uploadImage(e, elemId){
+  const file = e.target.files[0];
+  if(file){
+    const reader = new FileReader();
+    reader.onload = function(evt){ setImageUrl(elemId, evt.target.result); };
+    reader.readAsDataURL(file);
+  }
+}
+function setImageUrl(elemId, url){
+  const img = document.getElementById(elemId);
+  if(url){
+    img.src = url;
+    img.style.display = 'block';
+  } else {
+    removeImage(elemId);
+  }
+}
+function removeImage(elemId){
+  const img = document.getElementById(elemId);
+  img.src = '';
+  img.style.display = 'none';
+}
+
+/* ---------- Gestão de Barras Verticais Laterais ---------- */
+function uploadSideBar(e, containerId, imgId){
+  const file = e.target.files[0];
+  if(file){
+    const reader = new FileReader();
+    reader.onload = function(evt){ setSideBarUrl(containerId, imgId, evt.target.result); };
+    reader.readAsDataURL(file);
+  }
+}
+function setSideBarUrl(containerId, imgId, url){
+  const container = document.getElementById(containerId);
+  const img = document.getElementById(imgId);
+  if(url){
+    img.src = url;
+    container.style.display = 'flex';
+  } else {
+    removeSideBar(containerId, imgId);
+  }
+}
+function setSideBarWidth(containerId, val){
+  const container = document.getElementById(containerId);
+  if(val && Number(val) > 0){
+    container.style.width = val + 'px';
+  } else {
+    container.style.width = '80px';
+  }
+}
+function removeSideBar(containerId, imgId){
+  const container = document.getElementById(containerId);
+  const img = document.getElementById(imgId);
+  img.src = '';
+  container.style.display = 'none';
+}
+
+/* ---------- Texto do Rodapé ---------- */
+function setFooterText(val){
+  const txtDiv = document.getElementById('footerText');
+  if(val && val.trim() !== ''){
+    txtDiv.innerText = val;
+    txtDiv.style.display = 'block';
+  } else {
+    txtDiv.innerText = '';
+    txtDiv.style.display = 'none';
+  }
+}
+
+/* ---------- Redimensionamento e Desenho ---------- */
 function resizeAll(){
-  // wheel size central - 80% do menor lado disponível
-  const size = Math.min(window.innerWidth, window.innerHeight) * 0.8;
+  const headerImg = document.getElementById('headerImage');
+  const headerH = headerImg.style.display === 'block' ? 90 : 0;
+  const availableHeight = window.innerHeight - headerH - 100;
+  const size = Math.min(window.innerWidth * 0.8, availableHeight * 0.75, 580);
+  
   wheelCanvas.width = size;
   wheelCanvas.height = size;
   confettiCanvas.width = window.innerWidth;
   confettiCanvas.height = window.innerHeight;
   fireworksCanvas.width = window.innerWidth;
   fireworksCanvas.height = window.innerHeight;
+  effectsCanvas.width = window.innerWidth;
+  effectsCanvas.height = window.innerHeight;
+  
   drawWheel();
 }
 window.addEventListener('resize', resizeAll);
 
 function drawWheel(){
-  const num = Math.max(items.length,1);
-  const arc = (2*Math.PI)/num;
-  const r = wheelCanvas.width/2;
-  ctx.clearRect(0,0,wheelCanvas.width,wheelCanvas.height);
+  const num = Math.max(items.length, 1);
+  const arc = (2 * Math.PI) / num;
+  const r = wheelCanvas.width / 2;
+  ctx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
 
-  for(let i=0;i<num;i++){
-    const start = i*arc;
+  for(let i = 0; i < num; i++){
+    const start = i * arc;
     ctx.beginPath();
-    ctx.moveTo(r,r);
-    ctx.arc(r,r,r,start,start+arc);
-    ctx.fillStyle = `hsl(${(i*360)/num} 70% 55%)`;
+    ctx.moveTo(r, r);
+    ctx.arc(r, r, r, start, start + arc);
+    ctx.fillStyle = "hsl(" + Math.floor(i * 360 / num) + ", 70%, 55%)";
     ctx.fill();
-    // label
+    
     ctx.save();
-    ctx.translate(r,r);
-    ctx.rotate(start + arc/2);
+    ctx.translate(r, r);
+    ctx.rotate(start + arc / 2);
     ctx.fillStyle = '#fff';
-    ctx.font = `${Math.max(12, r*0.08)}px Arial`;
+    ctx.font = Math.max(12, r * 0.08) + "px Arial";
     ctx.textAlign = 'right';
-    // limit text length visually
-    const label = items[i] ?? '';
+    
+    const label = items[i] ? items[i].text : '';
     wrapTextOnRadius(ctx, label, r - 12);
     ctx.restore();
   }
 }
 
-// desenha texto ao longo do raio (simples: apenas uma linha ajustada)
 function wrapTextOnRadius(ctx, text, radius){
   if(!text) return;
-  // corta se muito grande
   let maxLen = 20;
-  let txt = text.length>maxLen? text.slice(0,maxLen-1)+'…': text;
+  let txt = text.length > maxLen ? text.slice(0, maxLen - 1) + '…' : text;
   ctx.fillText(txt, radius, 5);
 }
 
-/* ---------- edição itens (painel config) ---------- */
+/* ---------- Edição de Itens ---------- */
 function updateItemsList(){
   itemsListDiv.innerHTML = '';
-  items.forEach((it,i)=>{
+  items.forEach((it, i) => {
     const row = document.createElement('div');
-    row.style.display='flex';
-    row.style.gap='6px';
-    row.style.marginBottom='6px';
-    row.innerHTML = `<input value="${escapeHtml(it)}" style="flex:1;padding:6px;border:1px solid #ccc;border-radius:6px" onchange="modifyItem(${i},this.value)">
-                     <button style="background:#ff6b6b;border:none;padding:6px;border-radius:6px;color:white" onclick="removeItem(${i})">x</button>`;
+    row.className = 'item-row';
+    row.innerHTML = `
+      <div class="item-row-top">
+        <input value="${escapeHtml(it.text)}" style="flex:1;padding:6px;border:1px solid #ccc;border-radius:6px" onchange="modifyItemText(${i},this.value)">
+        <button style="background:#ff6b6b;border:none;padding:6px;border-radius:6px;color:white" onclick="removeItem(${i})">x</button>
+      </div>
+      <select style="padding:4px;border:1px solid #ccc;border-radius:6px" onchange="modifyItemAnim(${i},this.value)">
+        <optgroup label="Festivas 🎉">
+          <option value="confetti_fireworks" ${it.anim==='confetti_fireworks'?'selected':''}>Confetes & Fogos</option>
+          <option value="gold_stars" ${it.anim==='gold_stars'?'selected':''}>Chuva de Estrelas & Ouro</option>
+          <option value="balloons" ${it.anim==='balloons'?'selected':''}>Balões Subindo</option>
+        </optgroup>
+        <optgroup label="Tristes / Decepcionantes 🌧️">
+          <option value="rain_thunder" ${it.anim==='rain_thunder'?'selected':''}>Chuva & Raios</option>
+          <option value="smoke_cloud" ${it.anim==='smoke_cloud'?'selected':''}>Nuvem Escura / Fumaça</option>
+          <option value="screen_shake" ${it.anim==='screen_shake'?'selected':''}>Tremor & Decepção</option>
+        </optgroup>
+        <option value="none" ${it.anim==='none'?'selected':''}>Nenhuma Animação</option>
+      </select>
+    `;
     itemsListDiv.appendChild(row);
   });
 }
+
 function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-window.modifyItem = (i, val) => { items[i] = val; drawWheel(); };
+window.modifyItemText = (i, val) => { items[i].text = val; drawWheel(); };
+window.modifyItemAnim = (i, val) => { items[i].anim = val; };
 window.addItem = () => {
-  const v = document.getElementById('newItem').value.trim();
-  if(!v) return;
-  items.push(v);
+  const txt = document.getElementById('newItem').value.trim();
+  const anim = document.getElementById('newAnim').value;
+  if(!txt) return;
+  items.push({ text: txt, anim: anim });
   document.getElementById('newItem').value = '';
   updateItemsList();
   drawWheel();
 };
-window.removeItem = (i) => { items.splice(i,1); updateItemsList(); drawWheel(); };
-window.resetDefaults = () => { items = ["Prêmio 1","Prêmio 2","Prêmio 3","Prêmio 4","Prêmio 5"]; updateItemsList(); drawWheel(); };
+window.removeItem = (i) => { items.splice(i, 1); updateItemsList(); drawWheel(); };
+window.resetDefaults = () => {
+  items = [
+    { text: "Prêmio 1", anim: "confetti_fireworks" },
+    { text: "Prêmio 2", anim: "rain_thunder" },
+    { text: "Prêmio 3", anim: "gold_stars" },
+    { text: "Prêmio 4", anim: "smoke_cloud" },
+    { text: "Prêmio 5", anim: "balloons" }
+  ];
+  updateItemsList();
+  drawWheel();
+};
 
-/* ---------- lógica de giro corrigida ---------- */
-/*
-Objetivo:
-- O eixo de referência (seta) está localizado BOTTOM center e aponta para cima,
-  isto corresponde ao ângulo 90º (no sistema do Canvas, 0 = eixo +X (direita), 90 = baixo).
-- Para colocar o centro do segmento i sob a seta devemos garantir:
-    (centerAngleDegrees + cumulativeRotation) % 360 === 90
-  onde centerAngleDegrees = i*segment + segment/2  (graus)
-- Calculamos delta necessário e somamos a cumulativeRotation.
-- Mantemos cumulativeRotation para giros subsequentes.
-*/
-function normalizeDeg(d){ // retorna [0,360)
+/* ---------- Lógica de Giro ---------- */
+function normalizeDeg(d){
   d = d % 360;
   if(d < 0) d += 360;
   return d;
@@ -167,75 +361,108 @@ function spin(){
   if(spinning || items.length === 0) return;
   spinning = true;
   spinVisibleBtn.disabled = true;
-  // play sound
-  try{ spinSound.currentTime = 0; spinSound.play(); }catch(e){ /* ignora */ }
+  clearEffects();
+
+  try{ spinSound.currentTime = 0; spinSound.play(); }catch(e){}
 
   const num = items.length;
   const arcDeg = 360 / num;
   const index = Math.floor(Math.random() * num);
 
-  // centro do segmento em graus (0 = +X, aumenta no sentido horário)
-  const centerAngle = index * arcDeg + arcDeg/2;
-
-  // desejamos: (centerAngle + cumulativeRotation) % 360 === 90
-  // então deltaNeeded ≡ 90 - (centerAngle + cumulativeRotation %360)  (mod 360)
+  const centerAngle = index * arcDeg + arcDeg / 2;
   const currentMod = normalizeDeg(cumulativeRotation);
   let delta = normalizeDeg(90 - (centerAngle + currentMod));
-  // garantir rotações extras para animação (pelo menos algumas voltas)
-  const extraSpins = 3; // número inteiro de 360º extras
+  const extraSpins = 3;
   const deltaTotal = extraSpins * 360 + delta;
 
   cumulativeRotation += deltaTotal;
 
-  // aplica a transformação (CSS) com a rotação cumulativa
-  wheelCanvas.style.transition = `transform ${spinDuration/1000}s cubic-bezier(.14,.84,.34,1)`;
-  wheelCanvas.style.transform = `translate(-50%,-50%) rotate(${cumulativeRotation}deg)`;
+  wheelCanvas.style.transition = "transform " + (spinDuration / 1000) + "s cubic-bezier(.14,.84,.34,1)";
+  wheelCanvas.style.transform = "translate(-50%,-50%) rotate(" + cumulativeRotation + "deg)";
 
-  // ao fim do tempo, definir resultado e efeitos
-  setTimeout(()=>{
+  setTimeout(() => {
     spinning = false;
     spinVisibleBtn.disabled = false;
     try{ spinSound.pause(); spinSound.currentTime = 0; }catch(e){}
-    // resultado já calculado
+
     const chosen = items[index];
-    resultDiv.innerText = `🎉 ${chosen}`;
-    // tocar som de vitória
-    try{ winSound.currentTime = 0; winSound.play(); }catch(e){}
-    confettiShow();
-    fireworkShow();
-  }, spinDuration + 60); // pequeno buffer
+    resultDiv.innerText = "🎉 " + chosen.text;
+    triggerPrizeAnimation(chosen.anim);
+  }, spinDuration + 60);
 }
 
-/* ---------- confete & fogos (simples) ---------- */
+/* ---------- Motor de Animações ---------- */
+function clearEffects(){
+  if(activeAnimationId) cancelAnimationFrame(activeAnimationId);
+  cctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+  fctx.clearRect(0, 0, fireworksCanvas.width, fireworksCanvas.height);
+  ectx.clearRect(0, 0, effectsCanvas.width, effectsCanvas.height);
+  document.body.classList.remove('shake-effect');
+}
+
+function triggerPrizeAnimation(animType){
+  clearEffects();
+  switch(animType){
+    case 'confetti_fireworks':
+      try{ winSound.currentTime = 0; winSound.play(); }catch(e){}
+      confettiShow();
+      fireworkShow();
+      break;
+    case 'gold_stars':
+      playAudioFx('festive');
+      runGoldStars();
+      break;
+    case 'balloons':
+      playAudioFx('festive');
+      runBalloons();
+      break;
+    case 'rain_thunder':
+      playAudioFx('sad');
+      runRainAndThunder();
+      break;
+    case 'smoke_cloud':
+      playAudioFx('sad');
+      runSmokeCloud();
+      break;
+    case 'screen_shake':
+      playAudioFx('sad');
+      document.body.classList.add('shake-effect');
+      setTimeout(() => document.body.classList.remove('shake-effect'), 600);
+      break;
+    default: break;
+  }
+}
+
+/* ---------- Confetes e Fogos ---------- */
 function confettiShow(){
   const W = confettiCanvas.width, H = confettiCanvas.height;
   let pieces = [];
-  for(let i=0;i<180;i++){
+  for(let i = 0; i < 180; i++){
     pieces.push({
-      x: Math.random()*W,
-      y: -Math.random()*H,
-      r: Math.random()*6+3,
-      c: `hsl(${Math.random()*360} 100% 60%)`,
-      s: Math.random()*3+1.5,
-      rot: Math.random()*360
+      x: Math.random() * W,
+      y: -Math.random() * H,
+      r: Math.random() * 6 + 3,
+      c: "hsl(" + (Math.random() * 360) + ", 100%, 60%)",
+      s: Math.random() * 3 + 1.5,
+      rot: Math.random() * 360
     });
   }
   function anim(){
-    cctx.clearRect(0,0,W,H);
-    pieces.forEach(p=>{
+    cctx.clearRect(0, 0, W, H);
+    pieces.forEach(p => {
       p.y += p.s;
-      p.x += Math.sin(p.y/30) * 1.5;
+      p.x += Math.sin(p.y / 30) * 1.5;
       p.rot += 4;
       cctx.save();
-      cctx.translate(p.x,p.y);
-      cctx.rotate(p.rot * Math.PI/180);
+      cctx.translate(p.x, p.y);
+      cctx.rotate(p.rot * Math.PI / 180);
       cctx.fillStyle = p.c;
-      cctx.fillRect(-p.r/2, -p.r/2, p.r, p.r*0.6);
+      cctx.fillRect(-p.r / 2, -p.r / 2, p.r, p.r * 0.6);
       cctx.restore();
     });
     pieces = pieces.filter(p => p.y < H + 20);
-    if(pieces.length>0) requestAnimationFrame(anim);
-    else cctx.clearRect(0,0,W,H);
+    if(pieces.length > 0) activeAnimationId = requestAnimationFrame(anim);
+    else cctx.clearRect(0, 0, W, H);
   }
   anim();
 }
@@ -243,53 +470,192 @@ function confettiShow(){
 function fireworkShow(){
   const W = fireworksCanvas.width, H = fireworksCanvas.height;
   let particles = [];
-  function rand(a,b){ return Math.random()*(b-a)+a; }
+  function rand(a, b){ return Math.random() * (b - a) + a; }
   function burst(){
-    const x = rand(80, W-80);
-    const y = rand(80, H/2);
-    const hue = rand(0,360);
-    for(let i=0;i<36;i++){
-      const ang = i*(Math.PI*2/36);
-      const speed = rand(1.8,6);
-      particles.push({x,y,vx:Math.cos(ang)*speed, vy:Math.sin(ang)*speed, life:rand(40,90), age:0, hue});
+    const x = rand(80, W - 80);
+    const y = rand(80, H / 2);
+    const hue = rand(0, 360);
+    for(let i = 0; i < 36; i++){
+      const ang = i * (Math.PI * 2 / 36);
+      const speed = rand(1.8, 6);
+      particles.push({ x, y, vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed, life: rand(40, 90), age: 0, hue });
     }
   }
-  for(let i=0;i<5;i++) burst();
+  for(let i = 0; i < 5; i++) burst();
 
   function loop(){
-    fctx.clearRect(0,0,W,H);
-    particles.forEach(p=>{
+    fctx.clearRect(0, 0, W, H);
+    particles.forEach(p => {
       p.x += p.vx;
       p.y += p.vy;
       p.vy += 0.04;
       p.age++;
-      const a = Math.max(1 - p.age/p.life, 0);
-      fctx.fillStyle = `hsla(${p.hue} 100% 60% / ${a})`;
+      const a = Math.max(1 - p.age / p.life, 0);
+      fctx.fillStyle = "hsla(" + p.hue + ", 100%, 60%, " + a + ")";
       fctx.beginPath();
-      fctx.arc(p.x,p.y,2,0,Math.PI*2);
+      fctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
       fctx.fill();
     });
     particles = particles.filter(p => p.age < p.life);
-    if(particles.length>0) requestAnimationFrame(loop);
-    else fctx.clearRect(0,0,W,H);
+    if(particles.length > 0) activeAnimationId = requestAnimationFrame(loop);
+    else fctx.clearRect(0, 0, W, H);
   }
   loop();
 }
 
-/* ---------- eventos UI ---------- */
-configBtn.onclick = ()=> {
+/* ---------- Animações Especiais ---------- */
+function runGoldStars(){
+  const W = effectsCanvas.width, H = effectsCanvas.height;
+  let stars = [];
+  for(let i = 0; i < 80; i++){
+    stars.push({ x: Math.random() * W, y: -Math.random() * H, vy: Math.random() * 3 + 2, size: Math.random() * 12 + 6, rot: Math.random() * 360 });
+  }
+  function loop(){
+    ectx.clearRect(0, 0, W, H);
+    stars.forEach(s => {
+      s.y += s.vy; s.rot += 2;
+      ectx.save(); ectx.translate(s.x, s.y); ectx.rotate(s.rot * Math.PI / 180);
+      ectx.fillStyle = "#ffd700";
+      ectx.beginPath();
+      for(let i = 0; i < 5; i++){
+        ectx.lineTo(Math.cos((18 + i * 72) * Math.PI / 180) * s.size, -Math.sin((18 + i * 72) * Math.PI / 180) * s.size);
+        ectx.lineTo(Math.cos((54 + i * 72) * Math.PI / 180) * (s.size / 2), -Math.sin((54 + i * 72) * Math.PI / 180) * (s.size / 2));
+      }
+      ectx.closePath(); ectx.fill(); ectx.restore();
+    });
+    stars = stars.filter(s => s.y < H + 30);
+    if(stars.length > 0) activeAnimationId = requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+function runBalloons(){
+  const W = effectsCanvas.width, H = effectsCanvas.height;
+  let balloons = [];
+  const colors = ['#ff4d4d', '#4da6ff', '#5cd65c', '#ffb31a', '#e600e6'];
+  for(let i = 0; i < 25; i++){
+    balloons.push({ x: Math.random() * W, y: H + Math.random() * 200, vy: -(Math.random() * 2.5 + 2), r: Math.random() * 15 + 20, color: colors[Math.floor(Math.random() * colors.length)] });
+  }
+  function loop(){
+    ectx.clearRect(0, 0, W, H);
+    balloons.forEach(b => {
+      b.y += b.vy; b.x += Math.sin(b.y / 30) * 0.8;
+      ectx.beginPath(); ectx.ellipse(b.x, b.y, b.r * 0.8, b.r, 0, 0, Math.PI * 2);
+      ectx.fillStyle = b.color; ectx.fill();
+      ectx.beginPath(); ectx.moveTo(b.x, b.y + b.r); ectx.lineTo(b.x, b.y + b.r + 25);
+      ectx.strokeStyle = '#888'; ectx.stroke();
+    });
+    balloons = balloons.filter(b => b.y > -50);
+    if(balloons.length > 0) activeAnimationId = requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+function runRainAndThunder(){
+  const W = effectsCanvas.width, H = effectsCanvas.height;
+  let drops = [];
+  for(let i = 0; i < 150; i++){
+    drops.push({ x: Math.random() * W, y: Math.random() * H, len: Math.random() * 15 + 10, vy: Math.random() * 10 + 12 });
+  }
+  let flash = 0;
+  function loop(){
+    ectx.fillStyle = 'rgba(20,20,30,0.3)';
+    ectx.fillRect(0, 0, W, H);
+    if(Math.random() < 0.03) flash = 10;
+    if(flash > 0){ ectx.fillStyle = 'rgba(255,255,255,' + (flash / 10) + ')'; ectx.fillRect(0, 0, W, H); flash--; }
+    ectx.strokeStyle = '#a4c2f4'; ectx.lineWidth = 1.5; ectx.beginPath();
+    drops.forEach(d => {
+      d.y += d.vy; if(d.y > H){ d.y = -20; d.x = Math.random() * W; }
+      ectx.moveTo(d.x, d.y); ectx.lineTo(d.x, d.y + d.len);
+    });
+    ectx.stroke();
+    activeAnimationId = requestAnimationFrame(loop);
+  }
+  loop();
+  setTimeout(clearEffects, 4500);
+}
+
+function runSmokeCloud(){
+  const W = effectsCanvas.width, H = effectsCanvas.height;
+  let smoke = [];
+  for(let i = 0; i < 40; i++){
+    smoke.push({ x: W / 2 + (Math.random() * 100 - 50), y: H / 2 + (Math.random() * 100 - 50), r: Math.random() * 30 + 20, vx: Math.random() * 2 - 1, vy: -Math.random() * 1.5 - 0.5, opacity: 0.8 });
+  }
+  function loop(){
+    ectx.clearRect(0, 0, W, H);
+    smoke.forEach(s => {
+      s.x += s.vx; s.y += s.vy; s.r += 0.4; s.opacity -= 0.005;
+      ectx.beginPath(); ectx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ectx.fillStyle = 'rgba(80,80,80,' + Math.max(s.opacity, 0) + ')'; ectx.fill();
+    });
+    smoke = smoke.filter(s => s.opacity > 0);
+    if(smoke.length > 0) activeAnimationId = requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+/* ---------- Áudio Sintético ---------- */
+function playAudioFx(type){
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if(!AudioCtx) return;
+    const actx = new AudioCtx();
+    if(type === 'festive'){
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      notes.forEach((freq, idx) => {
+        const osc = actx.createOscillator();
+        const gain = actx.createGain();
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.1, actx.currentTime + idx * 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + idx * 0.1 + 0.3);
+        osc.connect(gain); gain.connect(actx.destination);
+        osc.start(actx.currentTime + idx * 0.1);
+        osc.stop(actx.currentTime + idx * 0.1 + 0.3);
+      });
+    } else if(type === 'sad') {
+      const osc = actx.createOscillator();
+      const gain = actx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(300, actx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(100, actx.currentTime + 0.8);
+      gain.gain.setValueAtTime(0.15, actx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + 0.8);
+      osc.connect(gain); gain.connect(actx.destination);
+      osc.start(); osc.stop(actx.currentTime + 0.8);
+    }
+  } catch(e){}
+}
+
+/* ---------- Eventos da UI e Teclado ---------- */
+configBtn.onclick = () => {
   const open = configPanel.style.display === 'block';
   configPanel.style.display = open ? 'none' : 'block';
   configPanel.setAttribute('aria-hidden', open ? 'true' : 'false');
 };
 
-// duplo clique na roleta
-wheelCanvas.ondblclick = ()=> spin();
+wheelCanvas.ondblclick = () => spin();
+spinVisibleBtn.onclick = () => spin();
 
-// botão visível
-spinVisibleBtn.onclick = ()=> spin();
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' || e.key === ' ') {
+    const isConfigOpen = configPanel.style.display === 'block';
+    const isEditingText = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
+    
+    if (!isConfigOpen && !isEditingText) {
+      e.preventDefault();
+      spin();
+    }
+  }
+});
 
-// inicialização
+/* ---------- Inicialização do DOM ---------- */
+window.addEventListener('DOMContentLoaded', () => {
+  resizeAll();
+  updateItemsList();
+  drawWheel();
+});
+
+// Execução de contingência
 resizeAll();
 updateItemsList();
 drawWheel();
