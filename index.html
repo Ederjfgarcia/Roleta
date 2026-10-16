@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Roleta da Sorte — Atualizado</title>
+<style>
+  html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;background:radial-gradient(circle at center,#fefefe 0%,#ddd 100%);overflow:hidden}
+  #result{position:absolute;top:18px;width:100%;text-align:center;font-size:1.6rem;font-weight:700;color:#222;text-shadow:0 2px 4px rgba(0,0,0,.15);z-index:12}
+  #wheelCanvas{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(0deg);border-radius:50%;transition:transform 5s cubic-bezier(.14,.84,.34,1);cursor:pointer;z-index:8}
+  .arrow{position:absolute;bottom:8px;left:50%;transform:translateX(-50%) rotate(180deg);width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;border-top:36px solid #d33;z-index:11;filter:drop-shadow(0 2px 4px rgba(0,0,0,.25))}
+  #configBtn{position:absolute;bottom:20px;right:20px;background:rgba(0,0,0,.28);color:#fff;border:none;border-radius:50%;width:50px;height:50px;font-size:22px;cursor:pointer;z-index:20}
+  #configPanel{position:absolute;bottom:80px;right:20px;background:#fff;border-radius:12px;padding:12px;box-shadow:0 8px 20px rgba(0,0,0,.18);display:none;width:260px;z-index:21}
+  #configPanel h3{margin:0 0 8px 0;font-size:16px}
+  #configPanel input[type=text]{width:100%;padding:6px;border:1px solid #ccc;border-radius:6px;margin-bottom:6px;box-sizing:border-box}
+  #configPanel button{padding:6px 8px;border-radius:6px;border:none;background:#2196f3;color:white;cursor:pointer;margin-right:6px}
+  #spinVisible{position:absolute;right:50%;transform:translateX(50%);bottom:20px;padding:12px 18px;background:#28a745;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer;z-index:19;box-shadow:0 6px 18px rgba(40,167,69,.25)}
+  #spinVisible:disabled{opacity:.55;cursor:default}
+  canvas#confettiCanvas, canvas#fireworksCanvas{position:fixed;left:0;top:0;pointer-events:none;width:100%;height:100%;z-index:15}
+  /* small responsive */
+  @media (max-width:480px){ #result{font-size:1.1rem} #configPanel{width:200px} }
+</style>
+</head>
+<body>
+  <div id="result">— Aguardando sorteio —</div>
+
+  <canvas id="wheelCanvas" width="600" height="600" aria-label="Roleta"></canvas>
+  <div class="arrow" aria-hidden="true"></div>
+
+  <canvas id="confettiCanvas"></canvas>
+  <canvas id="fireworksCanvas"></canvas>
+
+  <button id="configBtn" title="Configurações">⚙️</button>
+
+  <div id="configPanel" aria-hidden="true">
+    <h3>Itens da Roleta</h3>
+    <div id="itemsList" style="max-height:200px;overflow:auto;margin-bottom:6px"></div>
+    <input id="newItem" type="text" placeholder="Novo item..." />
+    <div style="margin-top:8px;">
+      <button onclick="addItem()">Adicionar</button>
+      <button id="resetBtn" style="background:#ff6b6b" onclick="resetDefaults()">Reset</button>
+    </div>
+  </div>
+
+  <button id="spinVisible" title="Girar roleta">Girar</button>
+
+  <!-- som de giro (CDN pública). Se quiser, posso trocar para outro arquivo. -->
+  <audio id="spinSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_f0e1a6b0c9.mp3?filename=steel-drums-10829.mp3" preload="auto"></audio>
+  <audio id="winSound" src="https://cdn.pixabay.com/download/audio/2021/12/15/audio_0c3a4d4b86.mp3?filename=applause-8-6413.mp3" preload="auto"></audio>
+
+<script>
+/* ---------- Variáveis e canvas ---------- */
+const wheelCanvas = document.getElementById('wheelCanvas');
+const ctx = wheelCanvas.getContext('2d');
+const confettiCanvas = document.getElementById('confettiCanvas');
+const cctx = confettiCanvas.getContext('2d');
+const fireworksCanvas = document.getElementById('fireworksCanvas');
+const fctx = fireworksCanvas.getContext('2d');
+
+const spinSound = document.getElementById('spinSound');
+const winSound = document.getElementById('winSound');
+const resultDiv = document.getElementById('result');
+const configBtn = document.getElementById('configBtn');
+const configPanel = document.getElementById('configPanel');
+const itemsListDiv = document.getElementById('itemsList');
+const spinVisibleBtn = document.getElementById('spinVisible');
+
+let items = ["Prêmio 1","Prêmio 2","Prêmio 3","Prêmio 4","Prêmio 5"];
+let cumulativeRotation = 0; // em graus, preserva rotação total entre giros
+let spinning = false;
+let spinDuration = 5000; // ms - deve combinar com CSS transition
+
+/* ---------- redimensionamento e desenho ---------- */
+function resizeAll(){
+  // wheel size central - 80% do menor lado disponível
+  const size = Math.min(window.innerWidth, window.innerHeight) * 0.8;
+  wheelCanvas.width = size;
+  wheelCanvas.height = size;
+  confettiCanvas.width = window.innerWidth;
+  confettiCanvas.height = window.innerHeight;
+  fireworksCanvas.width = window.innerWidth;
+  fireworksCanvas.height = window.innerHeight;
+  drawWheel();
+}
+window.addEventListener('resize', resizeAll);
+
+function drawWheel(){
+  const num = Math.max(items.length,1);
+  const arc = (2*Math.PI)/num;
+  const r = wheelCanvas.width/2;
+  ctx.clearRect(0,0,wheelCanvas.width,wheelCanvas.height);
+
+  for(let i=0;i<num;i++){
+    const start = i*arc;
+    ctx.beginPath();
+    ctx.moveTo(r,r);
+    ctx.arc(r,r,r,start,start+arc);
+    ctx.fillStyle = `hsl(${(i*360)/num} 70% 55%)`;
+    ctx.fill();
+    // label
+    ctx.save();
+    ctx.translate(r,r);
+    ctx.rotate(start + arc/2);
+    ctx.fillStyle = '#fff';
+    ctx.font = `${Math.max(12, r*0.08)}px Arial`;
+    ctx.textAlign = 'right';
+    // limit text length visually
+    const label = items[i] ?? '';
+    wrapTextOnRadius(ctx, label, r - 12);
+    ctx.restore();
+  }
+}
+
+// desenha texto ao longo do raio (simples: apenas uma linha ajustada)
+function wrapTextOnRadius(ctx, text, radius){
+  if(!text) return;
+  // corta se muito grande
+  let maxLen = 20;
+  let txt = text.length>maxLen? text.slice(0,maxLen-1)+'…': text;
+  ctx.fillText(txt, radius, 5);
+}
+
+/* ---------- edição itens (painel config) ---------- */
+function updateItemsList(){
+  itemsListDiv.innerHTML = '';
+  items.forEach((it,i)=>{
+    const row = document.createElement('div');
+    row.style.display='flex';
+    row.style.gap='6px';
+    row.style.marginBottom='6px';
+    row.innerHTML = `<input value="${escapeHtml(it)}" style="flex:1;padding:6px;border:1px solid #ccc;border-radius:6px" onchange="modifyItem(${i},this.value)">
+                     <button style="background:#ff6b6b;border:none;padding:6px;border-radius:6px;color:white" onclick="removeItem(${i})">x</button>`;
+    itemsListDiv.appendChild(row);
+  });
+}
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+window.modifyItem = (i, val) => { items[i] = val; drawWheel(); };
+window.addItem = () => {
+  const v = document.getElementById('newItem').value.trim();
+  if(!v) return;
+  items.push(v);
+  document.getElementById('newItem').value = '';
+  updateItemsList();
+  drawWheel();
+};
+window.removeItem = (i) => { items.splice(i,1); updateItemsList(); drawWheel(); };
+window.resetDefaults = () => { items = ["Prêmio 1","Prêmio 2","Prêmio 3","Prêmio 4","Prêmio 5"]; updateItemsList(); drawWheel(); };
+
+/* ---------- lógica de giro corrigida ---------- */
+/*
+Objetivo:
+- O eixo de referência (seta) está localizado BOTTOM center e aponta para cima,
+  isto corresponde ao ângulo 90º (no sistema do Canvas, 0 = eixo +X (direita), 90 = baixo).
+- Para colocar o centro do segmento i sob a seta devemos garantir:
+    (centerAngleDegrees + cumulativeRotation) % 360 === 90
+  onde centerAngleDegrees = i*segment + segment/2  (graus)
+- Calculamos delta necessário e somamos a cumulativeRotation.
+- Mantemos cumulativeRotation para giros subsequentes.
+*/
+function normalizeDeg(d){ // retorna [0,360)
+  d = d % 360;
+  if(d < 0) d += 360;
+  return d;
+}
+
+function spin(){
+  if(spinning || items.length === 0) return;
+  spinning = true;
+  spinVisibleBtn.disabled = true;
+  // play sound
+  try{ spinSound.currentTime = 0; spinSound.play(); }catch(e){ /* ignora */ }
+
+  const num = items.length;
+  const arcDeg = 360 / num;
+  const index = Math.floor(Math.random() * num);
+
+  // centro do segmento em graus (0 = +X, aumenta no sentido horário)
+  const centerAngle = index * arcDeg + arcDeg/2;
+
+  // desejamos: (centerAngle + cumulativeRotation) % 360 === 90
+  // então deltaNeeded ≡ 90 - (centerAngle + cumulativeRotation %360)  (mod 360)
+  const currentMod = normalizeDeg(cumulativeRotation);
+  let delta = normalizeDeg(90 - (centerAngle + currentMod));
+  // garantir rotações extras para animação (pelo menos algumas voltas)
+  const extraSpins = 3; // número inteiro de 360º extras
+  const deltaTotal = extraSpins * 360 + delta;
+
+  cumulativeRotation += deltaTotal;
+
+  // aplica a transformação (CSS) com a rotação cumulativa
+  wheelCanvas.style.transition = `transform ${spinDuration/1000}s cubic-bezier(.14,.84,.34,1)`;
+  wheelCanvas.style.transform = `translate(-50%,-50%) rotate(${cumulativeRotation}deg)`;
+
+  // ao fim do tempo, definir resultado e efeitos
+  setTimeout(()=>{
+    spinning = false;
+    spinVisibleBtn.disabled = false;
+    try{ spinSound.pause(); spinSound.currentTime = 0; }catch(e){}
+    // resultado já calculado
+    const chosen = items[index];
+    resultDiv.innerText = `🎉 ${chosen}`;
+    // tocar som de vitória
+    try{ winSound.currentTime = 0; winSound.play(); }catch(e){}
+    confettiShow();
+    fireworkShow();
+  }, spinDuration + 60); // pequeno buffer
+}
+
+/* ---------- confete & fogos (simples) ---------- */
+function confettiShow(){
+  const W = confettiCanvas.width, H = confettiCanvas.height;
+  let pieces = [];
+  for(let i=0;i<180;i++){
+    pieces.push({
+      x: Math.random()*W,
+      y: -Math.random()*H,
+      r: Math.random()*6+3,
+      c: `hsl(${Math.random()*360} 100% 60%)`,
+      s: Math.random()*3+1.5,
+      rot: Math.random()*360
+    });
+  }
+  function anim(){
+    cctx.clearRect(0,0,W,H);
+    pieces.forEach(p=>{
+      p.y += p.s;
+      p.x += Math.sin(p.y/30) * 1.5;
+      p.rot += 4;
+      cctx.save();
+      cctx.translate(p.x,p.y);
+      cctx.rotate(p.rot * Math.PI/180);
+      cctx.fillStyle = p.c;
+      cctx.fillRect(-p.r/2, -p.r/2, p.r, p.r*0.6);
+      cctx.restore();
+    });
+    pieces = pieces.filter(p => p.y < H + 20);
+    if(pieces.length>0) requestAnimationFrame(anim);
+    else cctx.clearRect(0,0,W,H);
+  }
+  anim();
+}
+
+function fireworkShow(){
+  const W = fireworksCanvas.width, H = fireworksCanvas.height;
+  let particles = [];
+  function rand(a,b){ return Math.random()*(b-a)+a; }
+  function burst(){
+    const x = rand(80, W-80);
+    const y = rand(80, H/2);
+    const hue = rand(0,360);
+    for(let i=0;i<36;i++){
+      const ang = i*(Math.PI*2/36);
+      const speed = rand(1.8,6);
+      particles.push({x,y,vx:Math.cos(ang)*speed, vy:Math.sin(ang)*speed, life:rand(40,90), age:0, hue});
+    }
+  }
+  for(let i=0;i<5;i++) burst();
+
+  function loop(){
+    fctx.clearRect(0,0,W,H);
+    particles.forEach(p=>{
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.04;
+      p.age++;
+      const a = Math.max(1 - p.age/p.life, 0);
+      fctx.fillStyle = `hsla(${p.hue} 100% 60% / ${a})`;
+      fctx.beginPath();
+      fctx.arc(p.x,p.y,2,0,Math.PI*2);
+      fctx.fill();
+    });
+    particles = particles.filter(p => p.age < p.life);
+    if(particles.length>0) requestAnimationFrame(loop);
+    else fctx.clearRect(0,0,W,H);
+  }
+  loop();
+}
+
+/* ---------- eventos UI ---------- */
+configBtn.onclick = ()=> {
+  const open = configPanel.style.display === 'block';
+  configPanel.style.display = open ? 'none' : 'block';
+  configPanel.setAttribute('aria-hidden', open ? 'true' : 'false');
+};
+
+// duplo clique na roleta
+wheelCanvas.ondblclick = ()=> spin();
+
+// botão visível
+spinVisibleBtn.onclick = ()=> spin();
+
+// inicialização
+resizeAll();
+updateItemsList();
+drawWheel();
+</script>
+</body>
+</html>
